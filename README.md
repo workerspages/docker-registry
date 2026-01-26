@@ -192,7 +192,58 @@ docker login registry-xxxx.zeabur.app
 *   **变量名**: `REGISTRY_HTTP_SECRET`
 *   **值**: 随便生成一串乱码（比如 `a1b2c3d4e5`）
 
-再次恭喜，你的私有镜像仓库搭建完成了！
+
+
+---
+
+### 关于那个 WARNING
+```text
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+```
+**请完全放心，这很正常。**
+*   **含义**：这只是 Docker 客户端提示你，它把你的账号密码（base64编码后）保存在了本地的 `/root/.docker/config.json` 文件里，而没有使用 Linux 的系统密钥环（keychain）来加密存储。
+*   **影响**：对功能没有任何影响。在服务器或 NAS 环境（看你的主机名是 `winnas`）下，这是标准表现。
+
+---
+
+### 🔥 趁热打铁：马上测试上传镜像
+
+现在你已经登录成功，建议马上做一个“上传测试”，确保推送功能也正常。
+
+#### 1. 找个小镜像练手（比如 busybox 或 nginx）
+```bash
+# 拉取一个公网的小镜像
+docker pull busybox
+```
+
+#### 2. 给镜像打上你私有仓库的标签
+**关键一步**：必须把名字改成 `你的域名/镜像名:标签` 的格式。
+```bash
+docker tag busybox docker-hub.zeabur.app/my-busybox:v1
+```
+
+#### 3. 推送到你的私有仓库
+```bash
+docker push docker-hub.zeabur.app/my-busybox:v1
+```
+*   如果看到进度条跑完，显示 `Pushed`，那就是完美成功！
+
+#### 4. (可选) 验证镜像真的在里面
+你可以通过 API 查看仓库里的镜像列表（需要输入密码）：
+```bash
+curl -u admin:你的密码 https://docker-hub.zeabur.app/v2/_catalog
+```
+*   成功的话应该返回：`{"repositories":["my-busybox"]}`
+
+---
+
+### ⚠️ 最后一次重要提醒：持久化
+如果在刚才的测试中，你推送到 Zeabur 成功了，但你**还没有配置 S3/OSS 对象存储的环境变量**：
+*   **现状**：镜像现在是存在 Zeabur 容器的临时硬盘里的。
+*   **风险**：一旦 Zeabur 重新部署或容器重启，**你刚才上传的镜像就会消失**。
+
+如果你已经配置好了 `REGISTRY_STORAGE_S3_...` 系列变量，那就放心使用吧！你的私人 Docker Hub 已经就绪！🚀
+
 
 
 
