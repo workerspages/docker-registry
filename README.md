@@ -169,6 +169,34 @@ jobs:
           tags: my-registry.zeabur.app/my-app:latest
 ```
 
+
+### 接下来你可以做什么？
+
+#### 1. 获取公网域名
+在 Zeabur 的控制台里，找到这个服务的 **Networking (网络)** 或 **Domains (域名)** 设置，绑定一个域名（或者使用 Zeabur 提供的自动域名），比如 `registry-xxxx.zeabur.app`。
+
+#### 2. 本地验证登录
+在你的电脑终端里运行：
+```bash
+docker login registry-xxxx.zeabur.app
+```
+*   **Username**: `admin`
+*   **Password**: *(你设置的 AUTH_PASS 密码)*
+
+如果显示 `Login Succeeded`，那就大功告成了！
+
+#### 3. (可选) 消除那个 Warning
+日志里有一行黄色的警告：
+`msg="No HTTP secret provided - generated random secret..."`
+这不会影响使用，但如果你想消除它（或者为了更安全），可以在 Zeabur 的环境变量里再加一项：
+*   **变量名**: `REGISTRY_HTTP_SECRET`
+*   **值**: 随便生成一串乱码（比如 `a1b2c3d4e5`）
+
+再次恭喜，你的私有镜像仓库搭建完成了！
+
+
+
+
 ## ❓ 常见问题排查
 
 **Q: 部署后日志一直循环输出 "Creating htpasswd..."？**
