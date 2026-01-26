@@ -248,6 +248,34 @@ curl -u admin:你的密码 https://docker-hub.zeabur.app/v2/_catalog
 
 
 
+---
+
+### 🚀 下一步：如何使用这个镜像？
+
+现在，你在任何一台联网的服务器（或者你的另一台 NAS）上，都可以直接拉取这个镜像了。
+
+**拉取命令：**
+```bash
+docker pull docker-hub.zeabur.app/cookiecloud:cookiecloud-metube-direct-server
+```
+
+**或者在 docker-compose.yml 中使用：**
+```yaml
+services:
+  cookiecloud:
+    image: docker-hub.zeabur.app/cookiecloud:cookiecloud-metube-direct-server
+    restart: always
+    # ... 其他配置
+```
+*(注意：在拉取之前，别忘了在那台新机器上也先执行 `docker login docker-hub.zeabur.app`)*
+
+
+
+
+
+
+
+
 ## ❓ 常见问题排查
 
 **Q: 部署后日志一直循环输出 "Creating htpasswd..."？**
