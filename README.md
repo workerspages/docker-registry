@@ -156,7 +156,7 @@ jobs:
       - name: Login to Private Registry
         uses: docker/login-action@v3
         with:
-          registry: my-registry.zeabur.app
+          registry: docker-hub.zeabur.app
           username: ${{ secrets.REGISTRY_USER }}  # 对应 AUTH_USER
           password: ${{ secrets.REGISTRY_PWD }}   # 对应 AUTH_PASS
 
@@ -166,7 +166,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: my-registry.zeabur.app/my-app:latest
+          tags: docker-hub.zeabur.app/镜像名:latest
 ```
 
 
