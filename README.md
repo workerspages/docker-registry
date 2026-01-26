@@ -286,3 +286,134 @@ A: PaaS 的文件系统是临时的。请务必配置 `REGISTRY_STORAGE` 相关�
 
 **Q: 需要配置 `insecure-registries` 吗？**
 A: 不需要。只要你的 PaaS 平台提供了 HTTPS 域名（绝大多数都提供），Docker 客户端就可以直接安全连接。
+
+
+
+
+
+
+
+
+
+
+
+
+### 案例
+
+### 核心修改点：
+1.  **新增登录步骤**：添加了登录你私人仓库的步骤。
+2.  **修改元数据生成**：在 `docker/metadata-action` 的 `images` 列表中加入了私人仓库地址，这样 Docker 会自动为私人仓库生成同样的标签（比如 `v1.0`, `latest`, `PaaS` 等）。
+
+### 前置准备（必须做）：
+你需要去 GitHub 仓库的 **Settings -> Secrets and variables -> Actions** 中添加以下三个变量：
+*   `PRIVATE_REGISTRY_HOST`: 你的私人仓库域名 (例如: `docker-hub.zeabur.app`)
+*   `PRIVATE_REGISTRY_USER`: 你的用户名 (例如: `admin`)
+*   `PRIVATE_REGISTRY_PWD`: 你的密码 (之前生成的那个)
+
+---
+
+### 修改后的 Workflow YAML
+
+```yaml
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches: [ PaaS ]
+    tags: [ "v*" ]
+  workflow_dispatch: {}
+
+env:
+  IMAGE_NAME: automation-aio
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      # 1. 登录 GHCR
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. 登录 Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 3. 登录 私人仓库 (新增步骤)
+      - name: Login to Private Registry
+        uses: docker/login-action@v3
+        with:
+          # 填你的域名，如 docker-hub.zeabur.app
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USER }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PWD }}
+
+      # 4. 生成 Tags (关键修改)
+      - name: Extract meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # 在这里把你的私人仓库地址加进去
+          images: |
+            ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
+            ${{ secrets.PRIVATE_REGISTRY_HOST }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.ref_name == github.event.repository.default_branch }}
+
+      # 5. 构建并推送
+      # 这里不需要改动，因为 tags 已经包含了上面生成的三份地址
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          no-cache: true
+```
+
+### 解释：为什么不需要在 `Build and push` 步骤里改 tags？
+
+`docker/metadata-action` 这个插件非常智能。当你在它的 `images` 列表里写了三个不同的仓库地址时：
+1.  GHCR
+2.  Docker Hub
+3.  Private Registry
+
+它生成的 `steps.meta.outputs.tags` 输出会自动包含这三个仓库的所有标签组合。例如：
+*   `ghcr.io/user/image:v1`
+*   `docker.io/user/image:v1`
+*   `docker-hub.zeabur.app/image:v1`
+
+`docker/build-push-action` 读取到这个列表后，就会**一次构建，同时推送到这三个地方**。这是最高效的做法，不需要重复构建。
+
+
+
+
+
+
+
+
+
+
+
