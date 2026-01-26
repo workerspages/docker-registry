@@ -173,12 +173,12 @@ jobs:
 ### 接下来你可以做什么？
 
 #### 1. 获取公网域名
-在 Zeabur 的控制台里，找到这个服务的 **Networking (网络)** 或 **Domains (域名)** 设置，绑定一个域名（或者使用 Zeabur 提供的自动域名），比如 `registry-xxxx.zeabur.app`。
+在 Zeabur 的控制台里，找到这个服务的 **Networking (网络)** 或 **Domains (域名)** 设置，绑定一个域名（或者使用 Zeabur 提供的自动域名），比如 `docker-hub.zeabur.app`。
 
 #### 2. 本地验证登录
 在你的电脑终端里运行：
 ```bash
-docker login registry-xxxx.zeabur.app
+docker login docker-hub.zeabur.app
 ```
 *   **Username**: `admin`
 *   **Password**: *(你设置的 AUTH_PASS 密码)*
