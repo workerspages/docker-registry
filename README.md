@@ -261,7 +261,7 @@ curl -u admin:你的密码 https://docker-hub.zeabur.app/v2/_catalog
 ```
 *   成功的话应该返回：`{"repositories":["automation-aio"]}`
 
-#### 2. 如何验证标签是否存在？
+#### 5. 如何验证标签是否存在？
 `_catalog` API 只能看有哪些镜像名（Repository），看不到标签。你需要用另一个 API 接口来查看具体的 Tag。
 
 请执行这条命令：
