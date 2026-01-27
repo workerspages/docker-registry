@@ -259,7 +259,29 @@ docker push docker-hub.zeabur.app/my-busybox:v1
 ```bash
 curl -u admin:你的密码 https://docker-hub.zeabur.app/v2/_catalog
 ```
-*   成功的话应该返回：`{"repositories":["my-busybox"]}`
+*   成功的话应该返回：`{"repositories":["automation-aio"]}`
+
+#### 2. 如何验证标签是否存在？
+`_catalog` API 只能看有哪些镜像名（Repository），看不到标签。你需要用另一个 API 接口来查看具体的 Tag。
+
+请执行这条命令：
+```bash
+curl -u admin:你的密码 https://docker-hub.zeabur.app/v2/automation-aio/tags/list
+```
+
+**预期的返回结果**应该是类似这样的：
+```json
+{"name":"automation-aio","tags":["paas", "sha-xxxxxxx"]}
+```
+*   `paas`: 对应你的分支构建。
+*   `sha-xxxx`: 对应你的 Git Commit SHA（如果 metadata action 默认配置了 sha 策略）。
+*   `latest`: 只有当 `PaaS` 是你的 GitHub 仓库的默认分支（Default Branch）时才会有。
+
+
+
+
+
+
 
 ---
 
