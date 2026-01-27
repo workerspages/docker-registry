@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  registry:
+    image: ghcr.io/workerspages/paas-registry:latest
+    container_name: docker-hub-registry
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - AUTH_USER=admin                                  # 修改这里：你的用户名
+      - AUTH_PASS=SuperSecret123                         # 修改这里：你的密码
+      - REGISTRY_HTTP_SECRET=change_me_to_random_string  # HTTP 签名密钥，建议修改为随机字符串
+
+      # -------------------------------------------------------
+      # ☁️ 存储配置 (可选：对象存储 S3/OSS)
+      # 如果在 PaaS 部署，必须取消注释并配置以下内容以防止数据丢失
+      # -------------------------------------------------------
+      # - REGISTRY_STORAGE=s3
+      # - REGISTRY_STORAGE_S3_ACCESSKEY=你的AccessKey
+      # - REGISTRY_STORAGE_S3_SECRETKEY=你的SecretKey
+      # - REGISTRY_STORAGE_S3_REGION=ap-northeast-1
+      # - REGISTRY_STORAGE_S3_BUCKET=你的Bucket名称
+      # - REGISTRY_STORAGE_S3_ROOTDIRECTORY=/registry-data
+
+    volumes:
+      # -------------------------------------------------------
+      # 💾 本地存储 (如果不使用 S3)
+      # 如果你是本地/VPS 部署，建议保留此挂载
+      # 如果你是纯 PaaS 环境且配置了 S3，这一行可以删除
+      # -------------------------------------------------------
+      - ./data:/var/lib/registry
