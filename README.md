@@ -1,10 +1,8 @@
+#  Docker 私有仓库
+> 如何构建一个支持动态生成密码、适配 PaaS 平台（防止无限循环）、并支持云端存储的 Docker 私有仓库。
 
 
-# 如何构建一个支持动态生成密码、适配 PaaS 平台（防止无限循环）、并支持云端存储的 Docker 私有仓库。
-
-
-# PaaS-Ready Private Docker Registry
-
+## PaaS-Ready Private Docker Registry
 这是一个专为 PaaS 平台（如 Zeabur, Railway, Render, Heroku 等）定制的 Docker 私有仓库方案。
 
 它解决了官方 `registry` 镜像在 PaaS 上部署时的两个核心痛点：
@@ -32,24 +30,20 @@
 #!/bin/sh
 set -e
 
-# 检查是否设置了用户名和密码
+# 如果设置了用户名和密码的环境变量，则生成密码文件
 if [ -n "$AUTH_USER" ] && [ -n "$AUTH_PASS" ]; then
-    echo "🔐 Configuring authentication for user: $AUTH_USER"
+    echo "Creating htpasswd file for user: $AUTH_USER"
     mkdir -p /auth
-    
-    # 使用 htpasswd 生成密码文件 (B: batch mode, b: password from command line, n: display on stdout)
+    # 使用 htpasswd 生成密码文件
     htpasswd -Bbn "$AUTH_USER" "$AUTH_PASS" > /auth/htpasswd
     
     # 设置 Registry 环境变量以使用该文件
     export REGISTRY_AUTH=htpasswd
     export REGISTRY_AUTH_HTPASSWD_REALM="Registry Realm"
     export REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd
-else
-    echo "⚠️ No AUTH_USER or AUTH_PASS set. Registry will be open to public (Dangerous on PaaS)."
 fi
 
 # 执行官方 Registry 的默认启动命令
-# 这里的 /entrypoint.sh 是官方镜像里原本自带的脚本
 exec /entrypoint.sh /etc/docker/registry/config.yml
 ```
 
@@ -58,22 +52,17 @@ exec /entrypoint.sh /etc/docker/registry/config.yml
 ```dockerfile
 FROM registry:2
 
-# 安装 apache2-utils 以获得 htpasswd 工具
-# 官方 registry 基于 Alpine Linux
+# 安装 htpasswd 工具
 RUN apk add --no-cache apache2-utils
 
-# 将启动脚本复制到容器中
-# ⚠️ 注意：复制为 /start.sh，绝对不要复制为 /entrypoint.sh
+# ⚠️ 修改点：复制为 start.sh，而不是 entrypoint.sh
 COPY start.sh /start.sh
-
-# 赋予执行权限
 RUN chmod +x /start.sh
 
-# 设置自定义入口点
+# ⚠️ 修改点：入口点改为 start.sh
 ENTRYPOINT ["/start.sh"]
 ```
 
----
 
 ## 🚀 部署指南 (Deploy to PaaS)
 
@@ -131,42 +120,78 @@ docker pull my-registry.zeabur.app/my-nginx:v1
 
 ## 🤖 CI/CD 集成 (GitHub Actions)
 
+### ⚠️ 准备工作
+请确保在 GitHub 仓库的 **Settings -> Secrets and variables -> Actions** 中配置了以下三个 Secrets：
+1.  `PRIVATE_REGISTRY_HOST`: 你的私人仓库域名（例如 `docker-hub.zeabur.app`，不要带 `https://`）
+2.  `PRIVATE_REGISTRY_USER`: `admin` (或你设置的用户名)
+3.  `PRIVATE_REGISTRY_PWD`: 你的密码
+
 在其他项目的 GitHub Actions 中自动构建并推送到此仓库的配置示例：
 
 `.github/workflows/deploy.yml`:
 
 ```yaml
-name: Build and Push
+name: Build and Push to Private Registry Only
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ - ]
+    tags: [ "v*" ]
+  workflow_dispatch: {}
+
+env:
+  # 你的镜像名称，最终会变成: docker-hub.zeabur.app/automation-aio
+  IMAGE_NAME: automation-aio
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # packages: write # 既然不推 GHCR 了，这个权限其实可以去掉了
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      # 登录到你的 PaaS 私有仓库
+      # --- 关键步骤：只登录私人仓库 ---
       - name: Login to Private Registry
         uses: docker/login-action@v3
         with:
-          registry: docker-hub.zeabur.app
-          username: ${{ secrets.REGISTRY_USER }}  # 对应 AUTH_USER
-          password: ${{ secrets.REGISTRY_PWD }}   # 对应 AUTH_PASS
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USER }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PWD }}
 
-      # 构建并推送
+      # --- 关键修改：Images 列表只写私人仓库地址 ---
+      - name: Extract meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          # 这样生成的标签会自动带上你的私有仓库前缀
+          images: ${{ secrets.PRIVATE_REGISTRY_HOST }}/${{ env.IMAGE_NAME }}
+          
+          # 定义标签规则（保持不变）
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            # 如果是默认分支，自动打 latest 标签
+            type=raw,value=latest,enable=${{ github.ref_name == github.event.repository.default_branch }}
+
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
+          file: ./Dockerfile
           push: true
-          tags: docker-hub.zeabur.app/镜像名:latest
+          platforms: linux/amd64,linux/arm64
+          # 这里会自动使用上面 meta 步骤生成的 tags（即包含私人仓库地址的 tag）
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # 既然是私有仓库，通常建议关闭缓存复用或者显式指定，这里保持原样即可
+          # no-cache: true # 如果你发现构建有问题，可以取消注释这一行
 ```
 
 
@@ -288,31 +313,14 @@ A: PaaS 的文件系统是临时的。请务必配置 `REGISTRY_STORAGE` 相关�
 A: 不需要。只要你的 PaaS 平台提供了 HTTPS 域名（绝大多数都提供），Docker 客户端就可以直接安全连接。
 
 
-
-
-
-
-
-
-
-
----
-# 案例
----
-
-### 案例
-
-### 核心修改点：
-1.  **新增登录步骤**：添加了登录你私人仓库的步骤。
-2.  **修改元数据生成**：在 `docker/metadata-action` 的 `images` 列表中加入了私人仓库地址，这样 Docker 会自动为私人仓库生成同样的标签（比如 `v1.0`, `latest`, `PaaS` 等）。
+<details>
+<summary>案例(同时将镜像保存到 GHCR  Docker Hub Private Registry 三个仓库中)</summary>
 
 ### 前置准备（必须做）：
 你需要去 GitHub 仓库的 **Settings -> Secrets and variables -> Actions** 中添加以下三个变量：
 *   `PRIVATE_REGISTRY_HOST`: 你的私人仓库域名 (例如: `docker-hub.zeabur.app`)
 *   `PRIVATE_REGISTRY_USER`: 你的用户名 (例如: `admin`)
 *   `PRIVATE_REGISTRY_PWD`: 你的密码 (之前生成的那个)
-
----
 
 ### 修改后的 Workflow YAML
 
@@ -408,6 +416,21 @@ jobs:
 *   `docker-hub.zeabur.app/image:v1`
 
 `docker/build-push-action` 读取到这个列表后，就会**一次构建，同时推送到这三个地方**。这是最高效的做法，不需要重复构建。
+
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
