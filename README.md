@@ -314,6 +314,7 @@ A: PaaS 的文件系统是临时的。请务必配置 `REGISTRY_STORAGE` 相关�
 A: 不需要。只要你的 PaaS 平台提供了 HTTPS 域名（绝大多数都提供），Docker 客户端就可以直接安全连接。
 
 
+---
 <details>
 <summary>案例(同时将镜像保存到 GHCR  Docker Hub Private Registry 三个仓库中)</summary>
 
