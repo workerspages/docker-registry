@@ -1,5 +1,5 @@
 #  Docker 私有仓库
-> 如何构建一个支持动态生成密码、适配 PaaS 平台（防止无限循环）、并支持云端存储的 Docker 私有仓库。
+> 构建一个支持动态生成密码、适配 PaaS 平台（防止无限循环）、并支持云端存储的 Docker 私有仓库。
 
 
 ## PaaS-Ready Private Docker Registry
@@ -77,6 +77,7 @@ ENTRYPOINT ["/start.sh"]
 | :--- | :--- | :--- |
 | `AUTH_USER` | `admin` | 你自定义的登录用户名 |
 | `AUTH_PASS` | `SuperSecret123` | 你自定义的登录密码 |
+| `REGISTRY_HTTP_SECRET` | `a1b2c3d4e5` | 随便生成一串乱码（比如 `a1b2c3d4e5`） |
 
 #### ☁️ 存储配置 (强烈推荐)
 **注意**：如果不配置 S3，PaaS 容器重启后，所有上传的镜像**都会丢失**。以下以 AWS S3 为例（阿里云 OSS、MinIO 等同理）：
