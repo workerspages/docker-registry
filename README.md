@@ -87,7 +87,7 @@ ENTRYPOINT ["/start.sh"]
 | `REGISTRY_STORAGE` | `s3` | 启用 S3 驱动 |
 | `REGISTRY_STORAGE_S3_ACCESSKEY` | `AKIAxxxxxx` | S3 Access Key |
 | `REGISTRY_STORAGE_S3_SECRETKEY` | `xxxxxx` | S3 Secret Key |
-| `REGISTRY_STORAGE_S3_REGION` | `ap-northeast-1` | Bucket 所在区域 |
+| `REGISTRY_STORAGE_S3_REGION` | `ap-northeast-1 或 auto` | Bucket 所在区域 |
 | `REGISTRY_STORAGE_S3_BUCKET` | `my-registry-bucket` | Bucket 名称 |
 
 ### 3. 等待部署完成
