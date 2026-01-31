@@ -2,7 +2,7 @@
 > 构建一个支持动态生成密码、适配 PaaS 平台（防止无限循环）、并支持云端存储的 Docker 私有仓库。
 
 
-## PaaS-Ready Private Docker Registry
+## Docker Registry
 这是一个专为 PaaS 平台（如 Zeabur, Railway, Render, Heroku 等）定制的 Docker 私有仓库方案。
 
 它解决了官方 `registry` 镜像在 PaaS 上部署时的两个核心痛点：
