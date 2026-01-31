@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   registry:
-    image: ghcr.io/workerspages/paas-registry:latest
+    image: ghcr.io/workerspages/docker-registry:latest
     container_name: docker-hub-registry
     restart: unless-stopped
     ports:
