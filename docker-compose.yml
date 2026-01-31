@@ -3,7 +3,7 @@ version: '3.8'
 services:
   registry:
     image: ghcr.io/workerspages/docker-registry:latest
-    container_name: docker-hub-registry
+    container_name: Docker-Registry
     restart: unless-stopped
     ports:
       - "5000:5000"
